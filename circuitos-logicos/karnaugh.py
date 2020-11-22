@@ -1,6 +1,11 @@
-from graphics import *
-from random import randint
+from graphics import Text, Point, Line, GraphWin, color_rgb
+from random import randint, shuffle
 from argparse import ArgumentParser
+from PIL import Image
+import io
+import os
+
+os.environ["PATH"] += ":/usr/local/bin:/usr/local/bin/gs"
 
 
 def get_input_args():
@@ -11,6 +16,8 @@ def get_input_args():
                         help="The height of the display window.")
     parser.add_argument('--square_size', type=int, default=50,
                         help="The legth of the side of each square in the Karnaugh map.")
+    parser.add_argument('--filename', type=str, default="karnaugh.jpg",
+                        help="The output file containing the Karnaugh map.")
     return parser.parse_args()
 
 
@@ -50,31 +57,31 @@ def get_k_map_lines(window_width, window_height, square_dim):
     return k_map_lines
 
 
-def get_k_map_variable_labels(window_width, window_height, square_dim):
+def get_k_map_variable_labels(window_width, window_height, square_dim, variables):
     labels = []
     labels.append(Text(Point(int(window_width/2 - 2.5*square_dim),
-                             window_height/2 - square_dim), "A"))
+                             window_height/2 - square_dim), variables[0][1]))
     labels.append(Text(Point(int(window_width/2 - 2.5*square_dim),
-                             window_height/2 + square_dim), "A'"))
+                             window_height/2 + square_dim), variables[0][0]))
 
     labels.append(
-        Text(Point(int(window_width/2 + 2.5*square_dim), window_height/2), "B"))
+        Text(Point(int(window_width/2 + 2.5*square_dim), window_height/2), variables[1][0]))
     labels.append(Text(Point(int(window_width/2 + 2.5*square_dim),
-                             int(window_height/2 - 1.5*square_dim)), "B'"))
+                             int(window_height/2 - 1.5*square_dim)), variables[1][1]))
     labels.append(Text(Point(int(window_width/2 + 2.5*square_dim),
-                             int(window_height/2 + 1.5*square_dim)), "B'"))
+                             int(window_height/2 + 1.5*square_dim)), variables[1][1]))
 
     labels.append(Text(Point(int(window_width/2 - square_dim),
-                             window_height/2 - 2.5*square_dim), "C"))
+                             window_height/2 - 2.5*square_dim), variables[2][1]))
     labels.append(Text(Point(int(window_width/2 + square_dim),
-                             window_height/2 - 2.5*square_dim), "C'"))
+                             window_height/2 - 2.5*square_dim), variables[2][0]))
 
     labels.append(
-        Text(Point(int(window_width/2), window_height/2 + 2.5*square_dim), "D"))
+        Text(Point(int(window_width/2), window_height/2 + 2.5*square_dim), variables[3][0]))
     labels.append(
-        Text(Point(int(window_width/2 - 1.5*square_dim), window_height/2 + 2.5*square_dim), "D'"))
+        Text(Point(int(window_width/2 - 1.5*square_dim), window_height/2 + 2.5*square_dim), variables[3][1]))
     labels.append(
-        Text(Point(int(window_width/2 + 1.5*square_dim), window_height/2 + 2.5*square_dim), "D'"))
+        Text(Point(int(window_width/2 + 1.5*square_dim), window_height/2 + 2.5*square_dim), variables[3][1]))
 
     return labels
 
@@ -87,7 +94,7 @@ def get_k_map_text_values(window_width, window_height, square_dim, k_map_values)
     return [Text(Point(window_width/2 + (x-2)*square_dim + square_dim/2, window_height/2 + (y-2)*square_dim + square_dim/2), str(k_map_values[x][y])) for x in range(4) for y in range(4)]
 
 
-def main(window_width=None, window_height=None, square_dim=None):
+def main(window_width, window_height, square_dim, filename):
 
     window = GraphWin("Karnaugh Map", window_width, window_height)
 
@@ -98,7 +105,9 @@ def main(window_width=None, window_height=None, square_dim=None):
         line.setFill(color_rgb(0, 0, 0))
         line.draw(window)
 
-    for label in get_k_map_variable_labels(window_width, window_height, square_dim):
+    variables = [(chr(i), chr(i) + "'") for i in range(65, 91)]
+    shuffle(variables)
+    for label in get_k_map_variable_labels(window_width, window_height, square_dim, variables):
         label.setTextColor('black')
         label.setSize(30)
         label.draw(window)
@@ -109,11 +118,16 @@ def main(window_width=None, window_height=None, square_dim=None):
         text.setSize(30)
         text.draw(window)
     # print(k_map_values)
-    window.getMouse()
+    ps = window.postscript(colormode='color')
+    img = Image.open(io.BytesIO(ps.encode('utf-8')))
+    img.save(filename)
+
     window.close()
 
 
 if __name__ == "__main__":
     args = get_input_args()
     main(window_width=args.window_width,
-         window_height=args.window_height, square_dim=args.square_size)
+         window_height=args.window_height,
+         square_dim=args.square_size,
+         filename=args.filename)
